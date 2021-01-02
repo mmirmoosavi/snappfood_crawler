@@ -9,5 +9,3 @@ import scrapy
 class SnappfoodItem(scrapy.Item):
     # define the fields for your item here like:
     comment = scrapy.Field()
-    label = scrapy.Field()
-    pass

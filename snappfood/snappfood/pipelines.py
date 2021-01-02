@@ -7,13 +7,13 @@
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
 import json
-from scrapy.exporters import CsvItemExporter
+from scrapy.exporters import CsvItemExporter, JsonItemExporter
 
 
 class SnappfoodPipeline:
     def open_spider(self, spider):
-        self.file = open("%s.csv" % (spider.name), 'wb')
-        self.exporter = CsvItemExporter(self.file)
+        self.file = open("%s.json" % (spider.name), 'wb', )
+        self.exporter = JsonItemExporter(self.file, ensure_ascii=False, indent=4)
         self.exporter.start_exporting()
 
     def close_spider(self, spider):
