@@ -5,6 +5,11 @@ from ..items import SnappfoodItem
 import re
 import json
 
+city_dict = {'Tehran': 300,
+             'Esfahan': 45,
+             'Mashhad': 37
+             }
+
 
 class CityLinkExtractor(LinkExtractor):
     def extract_links(self, response):
@@ -104,7 +109,7 @@ class ExtractLinks(CrawlSpider):
                 item = SnappfoodItem(comment=elem)
                 yield item
         else:
-            return
+            yield
 
     def crawl_comment_without_page(self, response):
         comment_base_url = response.url[:-2]
