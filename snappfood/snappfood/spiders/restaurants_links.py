@@ -76,7 +76,6 @@ class ExtractLinks(CrawlSpider):
         #                      meta=vendor_info)
 
     def extract_comment_link(self, response):
-        print('ffffffffff')
         url = response.url
         comment_regex = re.compile('(https?://.*/)menu/(.{6})')
         result = comment_regex.match(url)
@@ -84,7 +83,7 @@ class ExtractLinks(CrawlSpider):
         vendor_hash_url = result.group(2)
         comment_url = '{}{}{}/0'.format(base_url, self.comments_url, vendor_hash_url)
         # return comment_url
-        yield scrapy.Request(comment_url, callback=self.count_comments)
+        yield scrapy.Request(comment_url, callback=self.count_comments, dont_filter=True)
 
     def count_comments(self, response):
         # vendor_info = response.meta
@@ -93,7 +92,7 @@ class ExtractLinks(CrawlSpider):
         count = json_res['data']['count']
         for i in range((count // 10) + 1):
             page_url = '{}/{}'.format(comment_base_url, i)
-            yield scrapy.Request(page_url, callback=self.crawl_comment)
+            yield scrapy.Request(page_url, callback=self.crawl_comment, dont_filter=True)
 
     def crawl_comment(self, response):
         # vendor_info = response.meta
