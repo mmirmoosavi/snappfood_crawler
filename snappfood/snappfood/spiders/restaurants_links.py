@@ -7,7 +7,19 @@ import json
 
 
 class CityLinkExtractor(LinkExtractor):
-    pass
+    def extract_links(self, response):
+        links = super().extract_links(response)
+        # return links
+        max_page = 260
+        final_links = []
+        for link in links:
+            base_url = link.url
+            for i in range(max_page, -1, -1):
+                changed_url = '{}?page={}'.format(base_url, i)
+                temp_link = link
+                temp_link.url = changed_url
+                final_links.append(temp_link)
+        return final_links
 
 
 class RestaurantLinkExtractor(LinkExtractor):
@@ -64,6 +76,7 @@ class ExtractLinks(CrawlSpider):
         #                      meta=vendor_info)
 
     def extract_comment_link(self, response):
+        print('ffffffffff')
         url = response.url
         comment_regex = re.compile('(https?://.*/)menu/(.{6})')
         result = comment_regex.match(url)
