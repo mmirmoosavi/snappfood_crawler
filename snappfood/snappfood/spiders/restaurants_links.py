@@ -1,10 +1,13 @@
 import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
+from scrapy.link import Link
 from ..items import SnappfoodItem
 import re
 import json
 
+all_rest_num = 0
+extract_rest_call = 0
 city_dict = {'Tehran': 300,
              'Esfahan': 45,
              'Mashhad': 37
@@ -14,21 +17,22 @@ city_dict = {'Tehran': 300,
 class CityLinkExtractor(LinkExtractor):
     def extract_links(self, response):
         links = super().extract_links(response)
-        # return links
-        max_page = 260
         final_links = []
+        max_page = 260
         for link in links:
             base_url = link.url
-            for i in range(max_page, -1, -1):
+            for i in range(max_page + 1):
                 changed_url = '{}?page={}'.format(base_url, i)
-                temp_link = link
-                temp_link.url = changed_url
-                final_links.append(temp_link)
+                new_link = Link(changed_url, link.text)
+                final_links.append(new_link)
+        print('city_pages_count: {}'.format(len(final_links)))
         return final_links
 
 
 class RestaurantLinkExtractor(LinkExtractor):
-    pass
+    def extract_links(self, response):
+        links = super().extract_links(response)
+        return links
 
 
 class ExtractLinks(CrawlSpider):
@@ -38,10 +42,10 @@ class ExtractLinks(CrawlSpider):
     # start_urls = ['https://snappfood.ir/restaurant/city/Tehran?services=RESTAURANT&page={}'.format(page) for page in
     #               range(1, 2)]
 
-    rules = (Rule(CityLinkExtractor(restrict_xpaths='//ul[@class="newfooter__citie-list"]')),
-             Rule(RestaurantLinkExtractor(restrict_xpaths=('//div[@class="kk-pp-btn"]',)),
-                  callback="extract_comment_link"),
-             )
+    # rules = (
+    #     Rule(CityLinkExtractor(restrict_xpaths='//ul[@class="newfooter__citie-list"]'),
+    #          callback='extract_restaurants'),)
+
     comments_url = 'comment/vendor/'
     restaurant_url = 'menu/new-menu/load?code='
 
@@ -80,6 +84,23 @@ class ExtractLinks(CrawlSpider):
         # return scrapy.Request(comment_url, callback=self.count_comments,
         #                      meta=vendor_info)
 
+    def parse_start_url(self, response, **kwargs):
+        city_extractor = CityLinkExtractor(restrict_xpaths='//ul[@class="newfooter__citie-list"]')
+        city_links = city_extractor.extract_links(response)
+        for link in city_links:
+            yield scrapy.Request(link.url, callback=self.extract_restaurants)
+
+    def extract_restaurants(self, response):
+        global all_rest_num, extract_rest_call
+        link_extractor = RestaurantLinkExtractor(restrict_xpaths=('//div[@class="kk-pp-btn"]',))
+        links = link_extractor.extract_links(response)
+        # print('restaurants_number: {}'.format(len(links)))
+        all_rest_num += len(links)
+        extract_rest_call += 1
+        print(all_rest_num, extract_rest_call)
+        for link in links:
+            yield scrapy.Request(link.url, callback=self.extract_comment_link)
+
     def extract_comment_link(self, response):
         url = response.url
         comment_regex = re.compile('(https?://.*/)menu/(.{6})')
@@ -88,7 +109,7 @@ class ExtractLinks(CrawlSpider):
         vendor_hash_url = result.group(2)
         comment_url = '{}{}{}/0'.format(base_url, self.comments_url, vendor_hash_url)
         # return comment_url
-        yield scrapy.Request(comment_url, callback=self.count_comments, dont_filter=True)
+        yield scrapy.Request(comment_url, callback=self.count_comments)
 
     def count_comments(self, response):
         # vendor_info = response.meta
@@ -97,7 +118,7 @@ class ExtractLinks(CrawlSpider):
         count = json_res['data']['count']
         for i in range((count // 10) + 1):
             page_url = '{}/{}'.format(comment_base_url, i)
-            yield scrapy.Request(page_url, callback=self.crawl_comment, dont_filter=True)
+            yield scrapy.Request(page_url, callback=self.crawl_comment)
 
     def crawl_comment(self, response):
         # vendor_info = response.meta
